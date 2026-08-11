@@ -1,0 +1,24 @@
+
+
+
+
+# Shell search and find
+
+bat ex*/*
+
+(dir=$PWD && cd ../test_setups/env001/ && tree )
+
+(dir=$PWD && cd ../test_setups/env001/ && bash $dir/ex1/clean)
+
+(dir=$PWD && cd ../test_setups/env001/ && bash ../env001_reset.sh)
+
+
+
+# C
+
+find . -name "*.c" | entr -c norminette /_
+
+inotifywait --include '\.c$' --format "%w%f" -mre modify . | while read -r FILE; do clear && norminette "$FILE"; done
+
+inotifywait --include '\.c$' --format "%w%f" -mre modify . | while read -r FILE; do clear && cc -Wall -Wextra -Werror "$FILE"; done
+
