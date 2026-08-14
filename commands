@@ -18,7 +18,20 @@ bat ex*/*
 
 find . -name "*.c" | entr -c norminette /_
 
+auto norminette
 inotifywait --include '\.c$' --format "%w%f" -mre modify . | while read -r FILE; do clear && norminette "$FILE"; done
 
+auto compile
 inotifywait --include '\.c$' --format "%w%f" -mre modify . | while read -r FILE; do clear && cc -Wall -Wextra -Werror "$FILE"; done
 
+auto uncomment + compile
+inotifywait --include '\.c$' --format "%w%f" -mre modify . | while read -r FILE; do cat "$FILE" | perl -0777 -pe 's|/\*\s*(int\smain.*?)\*/|$1|gs' | clear && cc -Wall -Wextra -Werror -x c -; done
+
+
+uncomment + compile all
+find -type f -name "*.c" | while read -r FILE; do DIR=$(dirname "$FILE"); cat "$FILE" | perl -0777 -pe 's|/\*\s*(int\smain.*?)\*/|$1|gs' | cc -Wall -Wextra -Werror -x c - -o "$DIR/a.out"; done
+
+uncomment + compile all w original filename
+find -type f -name "*.c" | while read -r FILE; do DIR=$(dirname "$FILE") NAME=$(basename "$FILE") BINNAME="${NAME%.c}" OUTPUT="$DIR/$BINNAME"; cat "$FILE" | perl -0777 -pe 's|/\*\s*(int\smain.*?)\*/|$1|gs' | cc -Wall -Wextra -Werror -x c - -o "$OUTPUT"; done
+
+ 
