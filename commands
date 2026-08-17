@@ -25,7 +25,7 @@ auto compile
 inotifywait --include '\.c$' --format "%w%f" -mre modify . | while read -r FILE; do clear && cc -Wall -Wextra -Werror "$FILE"; done
 
 auto uncomment + compile
-inotifywait --include '\.c$' --format "%w%f" -mre modify . | while read -r FILE; do cat "$FILE" | perl -0777 -pe 's|/\*\s*(int\smain.*?)\*/|$1|gs' | clear && cc -Wall -Wextra -Werror -x c -; done
+inotifywait --include '\.c$' --format "%w%f" -mre modify . | while read -r FILE; do clear && cat "$FILE" | perl -0777 -pe 's|/\*\s*(int\smain.*?)\*/|$1|gs' | cc -Wall -Wextra -Werror -x c -; done
 
 
 uncomment + compile all
