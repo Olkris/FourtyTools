@@ -2,8 +2,7 @@
 clear && inotifywait --include '\.c$' -mre modify . | while read -r DIR EVENT FILE; do clear && cat "$DIR"*.c | perl -0777 -pe 's|/\*(\s*(?:(?!\*/).)*?int\smain.*?)\*/|$1|gs' | cc -Wall -Wextra -Werror -x c - && norminette "$DIR/$FILE"; done
 
 ## Instant review (Norminette & uncomment & compile all files in all directories)
-clear && tree && read -p "Press Enter to continue..." && clear && find -mindepth 1 -type d | while read -r DIR; do norminette "$DIR" && read -p "Press Enter to continue..." && clear && cat "$DIR/*.c" | perl -0777 -pe 's|/\*(\s*(?:(?!\*/).)*?int\smain.*?)\*/|$1|gs' | cc -Wall -Wextra -Werror -x c - -o "$DIR/a.out"; done
-
+clear && tree && read -p "Press Enter to continue..." && clear && norminette && read -p "Press Enter to continue..." && clear && find -mindepth 1 -type d -name "ex*" | while read -r DIR; do cat "$DIR/"*.c | perl -0777 -pe 's|/\*(\s*(?:(?!\*/).)*?int\smain.*?)\*/|$1|gs' | cc -Wall -Wextra -Werror -x c - -o "$DIR/a.out"; done
 
 
 # Early scraps (ignore)
