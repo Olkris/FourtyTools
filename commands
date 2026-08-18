@@ -1,8 +1,9 @@
 ## Dev sentinel (Norminette file + uncomment & compile all in triggered directory)
 clear && inotifywait --include '\.c$' -mre modify . | while read -r DIR EVENT FILE; do clear && cat "$DIR"*.c | perl -0777 -pe 's|/\*(\s*(?:(?!\*/).)*?int\smain.*?)\*/|$1|gs' | cc -Wall -Wextra -Werror -x c - && norminette "$DIR/$FILE"; done
 
-## Instant review (Norminette & uncomment & compile all files in all directories)
-clear && tree && read -p "Press Enter to continue..." && clear && norminette && read -p "Press Enter to continue..." && clear && find -mindepth 1 -type d -name "ex*" | while read -r DIR; do cat "$DIR/"*.c | perl -0777 -pe 's|/\*(\s*(?:(?!\*/).)*?int\smain.*?)\*/|$1|gs' | cc -Wall -Wextra -Werror -x c - -o "$DIR/a.out"; done
+## Fast review (Tree + norminette + uncomment & compile & run all iteratively)
+clear && tree && read -p "Press Enter to continue..." && clear && norminette && read -p "Press Enter to continue..." && clear && find -mindepth 1 -type d -name "ex*" | while read -r DIR; do bat "$DIR/"*.c --paging=never && cat "$DIR/"*.c | perl -0777 -pe 's|/\*(\s*(?:(?!\*/).)*?int\smain.*?)\*/|$1|gs' | cc -Wall -Wextra -Werror -x c - -o "$DIR/a.out" && "$DIR/"a.out </dev/tty && read -p "Press Enter to continue..." </dev/tty && clear; done && rm */a.out
+
 
 
 # Early scraps (ignore)
