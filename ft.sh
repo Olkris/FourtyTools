@@ -6,6 +6,10 @@
 
 # Core evaluation logic shared by both Full and Local modes
 run_evaluation_loop() {
+	clear
+	tree
+	read -p "Press Enter to continue..." </dev/tty
+
 	clear 
 	norminette
 	read -p "Press Enter to continue..." </dev/tty
@@ -13,7 +17,7 @@ run_evaluation_loop() {
 	clear
 	find -mindepth 1 -type d -name "ex*" | sort | while read -r DIR; do
 		FILES=("$DIR"/*.c)
-	    [ -e "${FILES}" ] || read -p "Directory $DIR is empty" </dev/tty && continue
+	    [ -e "${FILES}" ] || { clear; read -p "Directory $DIR is empty" </dev/tty; continue; }
 	
 		bat "$DIR/"*.c --paging=never
 
@@ -35,7 +39,7 @@ run_evaluation_loop() {
 				break
 			elif [ "$ARGS" = "q" ]; then
 				rm -f "$DIR/a.out"
-				cd .. && rm -rf review
+				[ -d "../review" ] && { cd .. && rm -rf review; }
 				exit 0
 			fi
 
@@ -57,9 +61,8 @@ run_evaluation_loop() {
 			fi
 		done
 		clear
+		rm "$DIR"/a.out 2>/dev/null
 	done
-
-	rm */a.out
 }
 
 mode_git_review() {
@@ -72,10 +75,6 @@ mode_git_review() {
 	clear
 	git clone "$REPO_URL" review
 	cd review
-
-	clear
-	tree
-	read -p "Press Enter to continue..." </dev/tty
 
 	# Run the core evaluation logic
 	run_evaluation_loop
@@ -96,9 +95,9 @@ mode_manual_review() {
 
 mode_dev_sentinel() {
 	clear
+	echo -e "\033[1;35m[Dev sentinel launched]\033[0m"
 	inotifywait --include '\.c$' -mre modify . | while read -r DIR EVENT FILE; do
 		clear
-		echo -e "\033[1;35m[Dev sentinel launched]\033[0m"
 		cat "$DIR"*.c | perl -0777 -pe 's|/\*(\s*(?:(?!\*/).)*?int\smain.*?)\*/|$1|gs' | \
 			cc -Wall -Wextra -Werror -x c - && norminette "$DIR/$FILE"
 	done
@@ -109,9 +108,9 @@ mode_dev_sentinel() {
 # ==========================================
 
 # If no argument is passed, default to "full"
-ARG1=${1:-review}
+MODE=${1:-review}
 
-case "$ARG1" in
+case "$MODE" in
 	"sentinel" | "s")
 		mode_dev_sentinel
 		;;
@@ -132,10 +131,10 @@ case "$ARG1" in
 		;;
 	*)
 		echo -e "\033[1;31mError: Unknown mode '$MODE'\033[0m"
-		cat << 'EOF'
+		cat << EOF
 Usage:
-	echo "  $0 [r|review|clone] [<url>]    - Quickly review other students' projects"
-	echo "  $0 [s|sentinel]                - Automatic compile & norminette on code change"
+	$0 [r|review|clone] [<url>]    - Quickly review other students' projects"
+	$0 [s|sentinel]                - Automatic compile & norminette on code change"
 EOF
 		exit 1
 		;;
