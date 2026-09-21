@@ -15,13 +15,14 @@ run_evaluation_loop() {
 	read -p "Press Enter to continue..." </dev/tty
 
 	clear
-	find -mindepth 1 -type d -name "ex*" | sort | while read -r DIR; do
+	find -mindepth 1 -type d -name "ex*" | sort -V | while read -r DIR; do
+		clear
 		FILES=("$DIR"/*.c)
-	    [ -e "${FILES}" ] || { clear; read -p "Directory $DIR is empty" </dev/tty; continue; }
+	    [ -e "${FILES}" ] || { read -p "Directory $DIR is empty" </dev/tty; continue; }
 	
 		bat "$DIR/"*.c --paging=never
 
-		cat "$DIR/"*.c | perl -0777 -pe 's|/\*(\s*(?:(?!\*/).)*?int\smain.*?)\*/|$1|gs' | \
+		cat "$DIR/"*.c | perl -0777 -pe 's|//\s*(#include\s*<.*?>)|$1|g; s|/\*(\s*(?:(?!\*/).)*?int\smain.*?)\*/|$1|gs' | \
 			cc -Wall -Wextra -Werror -x c - -o "$DIR/a.out" 2>/tmp/compile_err
 
 		if [ ! -f "$DIR/a.out" ]; then
@@ -33,7 +34,7 @@ run_evaluation_loop() {
 
 		while true; do
 			echo -e "\n\033[1;34m==================== [ $DIR ] ====================\033[0m"
-			read -p "Enter arguments (or 'n' for next, 'q' to quit): " ARGS </dev/tty
+			read -e -p "Enter arguments (or 'n' for next, 'q' to quit): " ARGS </dev/tty
 
 			if [ "$ARGS" = "n" ]; then
 				break
@@ -79,9 +80,10 @@ mode_git_review() {
 	# Run the core evaluation logic
 	run_evaluation_loop
 
+	clear
 	cd ..
 	rm -rf review
-	echo -e "\n\033[1;32m[Review complete! Cleared out review directory automatically]\033[0m"
+	echo -e "\033[1;38;5;40m[Review complete! Cleared out review directory automatically]\033[0m\n"
 }
 
 mode_manual_review() {
@@ -90,7 +92,8 @@ mode_manual_review() {
 	# Run core logic directly in current folder
 	run_evaluation_loop
 
-	echo -e "\n\033[1;32m[Review complete!]\033[0m"
+	clear
+	echo -e "\033[1;38;5;40m[Review complete!]\033[0m\n"
 }
 
 mode_dev_sentinel() {
@@ -98,7 +101,7 @@ mode_dev_sentinel() {
 	echo -e "\033[1;35m[Dev sentinel launched]\033[0m"
 	inotifywait --include '\.c$' -mre modify . | while read -r DIR EVENT FILE; do
 		clear
-		cat "$DIR"*.c | perl -0777 -pe 's|/\*(\s*(?:(?!\*/).)*?int\smain.*?)\*/|$1|gs' | \
+		cat "$DIR"*.c | perl -0777 -pe 's|//\s*(#include\s*<.*?>)|$1|g; s|/\*(\s*(?:(?!\*/).)*?int\smain.*?)\*/|$1|gs' | \
 			cc -Wall -Wextra -Werror -x c - && norminette "$DIR/$FILE"
 	done
 }
@@ -112,6 +115,7 @@ MODE=${1:-review}
 
 case "$MODE" in
 	"sentinel" | "s")
+		CURR_DIR="$PWD"
 		mode_dev_sentinel
 		;;
 	"review" | "r" | "clone")
@@ -139,4 +143,3 @@ EOF
 		exit 1
 		;;
 esac
-
