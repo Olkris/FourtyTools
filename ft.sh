@@ -1,24 +1,40 @@
 #!/bin/bash
 
 # ==========================================
+# INIT SECTION
+# ==========================================
+
+trap cleanup INT TERM
+
+# ==========================================
+# NAMED LOGIC BLOCKS
+# ==========================================
+
+cleanup() {
+	tput rmcup
+	clear
+	echo -e "\n\033[1;33m[Closed FourtyTool]\033[0m"
+	exit 0
+}
+
+# ==========================================
 # FUNCTIONS FOR DIFFERENT MODES
 # ==========================================
 
-# Core evaluation logic shared by both Full and Local modes
-run_evaluation_loop() {
+mode_review() {
 	clear
 	tree
-	read -p "Press Enter to continue..." </dev/tty
+	read -e -p "Press Enter to continue..." </dev/tty
 
 	clear 
 	norminette
-	read -p "Press Enter to continue..." </dev/tty
+	read -e -p "Press Enter to continue..." </dev/tty
 
 	clear
 	find -mindepth 1 -type d -name "ex*" | sort -V | while read -r DIR; do
 		clear
 		FILES=("$DIR"/*.c)
-	    [ -e "${FILES}" ] || { read -p "Directory $DIR is empty" </dev/tty; continue; }
+	    [ -e "${FILES}" ] || { read -e -p "Directory $DIR is empty" </dev/tty; continue; }
 	
 		bat "$DIR/"*.c --paging=never
 
@@ -28,13 +44,14 @@ run_evaluation_loop() {
 		if [ ! -f "$DIR/a.out" ]; then
 			echo -e "\n\033[1;31m[Compilation Failed]\033[0m"
 			cat /tmp/compile_err
-			read -p "Press Enter to skip to next exercise..." </dev/tty
+			read -e -p "Press Enter to skip to next exercise..." </dev/tty
 			continue
 		fi
 
 		while true; do
 			echo -e "\n\033[1;34m==================== [ $DIR ] ====================\033[0m"
-			read -e -p "Enter arguments (or 'n' for next, 'q' to quit): " ARGS </dev/tty
+			# read -raw -editor -prompt
+			read -r -e -p "Enter arguments (or 'n' for next, 'q' to quit): " ARGS </dev/tty
 
 			if [ "$ARGS" = "n" ]; then
 				break
@@ -61,42 +78,23 @@ run_evaluation_loop() {
 				echo -e "\n\033[1;31m[Execution Interrupted by User]\033[0m"
 			fi
 		done
-		clear
 		rm "$DIR"/a.out 2>/dev/null
 	done
 }
 
-mode_git_review() {
+git_review_wrapper() {
 	local REPO_URL="$1"
 	
-	if [ -z "$REPO_URL" ]; then
-		read -p "Git repo: " REPO_URL </dev/tty
-	fi
-	
-	clear
 	git clone "$REPO_URL" review
 	cd review
 
-	# Run the core evaluation logic
-	run_evaluation_loop
+	mode_review
 
-	clear
 	cd ..
 	rm -rf review
-	echo -e "\033[1;38;5;40m[Review complete! Cleared out review directory automatically]\033[0m\n"
 }
 
-mode_manual_review() {
-	echo -e "\033[1;34m[Reviewing the current directory]\033[0m\n"
-
-	# Run core logic directly in current folder
-	run_evaluation_loop
-
-	clear
-	echo -e "\033[1;38;5;40m[Review complete!]\033[0m\n"
-}
-
-mode_dev_sentinel() {
+mode_sentinel() {
 	clear
 	echo -e "\033[1;35m[Dev sentinel launched]\033[0m"
 	inotifywait --include '\.c$' -mre modify . | while read -r DIR EVENT FILE; do
@@ -107,16 +105,26 @@ mode_dev_sentinel() {
 }
 
 # ==========================================
-# MODE ROUTER (THE CASE STATEMENT)
+# REUSABLE PRINT BLOCKS
 # ==========================================
 
-# If no argument is passed, default to "full"
-MODE=${1:-review}
+print_usage() {
+cat << EOF
+Usage:
+    ft [r|review|clone] [<url>]    - Quickly review other students' projects"
+    ft [s|sentinel]                - Automatic compile & norminette on code change"
+EOF
+}
+
+# ==========================================
+# MAIN FUNCTION (MODE ROUTER)
+# ==========================================
+
+MODE=$1
 
 case "$MODE" in
 	"sentinel" | "s")
-		CURR_DIR="$PWD"
-		mode_dev_sentinel
+		mode_sentinel
 		;;
 	"review" | "r" | "clone")
 		clear
@@ -124,22 +132,30 @@ case "$MODE" in
 
 		if [ -z "$REPO_URL" ]; then
 			echo -e "\033[1;34m[Review mode launched]\033[0m"
-			read -p "Enter git repo URL (or leave blank to review current directory): " REPO_URL </dev/tty
+			read -e -p "Enter git repo URL (or leave blank to review current directory): " REPO_URL </dev/tty
 		fi
 
 		if [ -z "$REPO_URL" ]; then
-			mode_manual_review
+			mode_review
+			clear
+			echo -e "\033[1;38;5;40m[Review complete!]\033[0m\n"
 		else
-			mode_git_review "$REPO_URL"
+			git_review_wrapper "$REPO_URL"
+			clear
+			echo -e "\033[1;38;5;40m[Review complete! Cleared out review directory automatically]\033[0m\n"
 		fi
+		;;
+	"help" | "h" | "-h" | "--help")
+		echo -e "\033[1;34mHelp page\033[0m"
+		print_usage
+		;;
+	"")
+		echo -e "\033[1;33mNo arguments provided\033[0m"
+		print_usage
 		;;
 	*)
 		echo -e "\033[1;31mError: Unknown mode '$MODE'\033[0m"
-		cat << EOF
-Usage:
-	$0 [r|review|clone] [<url>]    - Quickly review other students' projects"
-	$0 [s|sentinel]                - Automatic compile & norminette on code change"
-EOF
+		print_usage
 		exit 1
 		;;
 esac
