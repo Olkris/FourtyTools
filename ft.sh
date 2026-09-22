@@ -13,7 +13,7 @@ trap cleanup INT TERM
 cleanup() {
 	tput rmcup
 	clear
-	echo -e "\n\033[1;33m[Closed FourtyTool]\033[0m"
+	echo -e "\033[1;33m[Closed FourtyTool]\033[0m\n"
 	exit 0
 }
 
