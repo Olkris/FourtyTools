@@ -11,10 +11,11 @@ Usage:
     ft [s|sentinel]                - Automatic compile & norminette on code change"
 
 Review mode keywords :
-    n            - Next review step / next exercise
-    p            - previous review step / previous exercise
-    q            - Quit review cleanly and run program cleanup code
-    debug perl   - Print the perl regex output for debug purposes
+    n              - Next review step / next exercise
+    p              - previous review step / previous exercise
+    q              - Quit review cleanly and run program cleanup code
+    noflag         - Try compiling without flags
+    debug perl     - Print the perl regex output for debug purposes
 EOF
 }
 
@@ -37,16 +38,28 @@ show_navigation_prompt() {
 }
 
 uncomment_code() {
-	perl -0777 -pe 's|//\s*(#include\s*<.*?>)|$1|g; s|/\*(\s*(?:(?!\*/).)*?int\smain.*?)\*/|$1|gs'
+	perl -0777 -pe 's|//\s*(#include\s*<.*?>)|$1|g; s|/\*(\s*(?:(?!\*/).)*?int\s*main.*?)\*/|$1|gs'
 }
 
-compile() {
+compile_review() {
 	cc -Wall -Wextra -Werror -x c - -o "$DIR/a.out" 2>/tmp/compile_err
+}
+
+compile_review_noflag() {
+	cc -x c - -o "$DIR/a.out"
+}
+
+compile_sentinel() {
+	cc -Wall -Wextra -Werror -x c -
 }
 
 disclose_command() {
 	USED_COMMAND=$1
 	echo -e "\033[33mCommand used:\033[0m > $USED_COMMAND\n"
+}
+
+check_norm() {
+	norminette -RCheckDefine
 }
 
 cleanup() {
@@ -75,7 +88,7 @@ review_step_selector() {
 
 		elif (( $STEP == -1 )); then
 			disclose_command "norminette"
-			norminette
+			norminette -RCheckDefine
 			show_navigation_prompt
 			if [ "$ARGS" = "" ]; then (( STEP++ )) fi
 
@@ -94,19 +107,23 @@ review_step_selector() {
 			bat "$FILES" --paging=never
 
 			UNCOMMENTED_CODE=$(cat "$FILES" | uncomment_code)
-			echo "$UNCOMMENTED_CODE" | compile
+			echo "$UNCOMMENTED_CODE" | compile_review
 
 			if [ ! -f "$DIR/a.out" ]; then
 				echo -e "\n\033[1;31m[Compilation Failed]\033[0m"
 				cat /tmp/compile_err
 				show_navigation_prompt "Press Enter to skip to next exercise..."
-				if [ "$ARGS" = "" ]; then (( STEP++ ))
+				if [ "$ARGS" = "" ]; then 
+					(( STEP++ ))
+					continue
 				elif [ "$ARGS" = "debug perl" ]; then
 					clear
 					echo "$UNCOMMENTED_CODE"
 					show_navigation_prompt
+					continue
+				elif [ "$ARGS" = "noflag" ]; then
+					echo "$UNCOMMENTED_CODE" | compile_review_noflag
 				fi
-				continue
 			fi
 
 			while true; do
@@ -227,7 +244,7 @@ mode_sentinel() {
 	echo -e "\033[1;35m[Dev sentinel launched]\033[0m"
 	inotifywait --include '\.c$' -mre modify . | while read -r DIR EVENT FILE; do
 		clear
-		cat "$DIR"*.c | uncomment_code | compile && norminette "$DIR/$FILE"
+		cat "$DIR"*.c | uncomment_code | compile_sentinel && norminette -RCheckDefine "$DIR/$FILE"
 	done
 }
 
