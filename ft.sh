@@ -23,6 +23,11 @@ EOF
 # NAMED LOGIC BLOCKS
 # ==========================================
 
+disclose_command() {
+	USED_COMMAND=$*
+	echo -e "\033[33mCommand used:\033[0m > $USED_COMMAND\n"
+}
+
 show_navigation_prompt() {
 	PROMPT_TEXT=${1:-Press Enter to continue...}
 	echo # auto \n
@@ -37,29 +42,38 @@ show_navigation_prompt() {
 	fi
 }
 
+show_file_tree() {
+	local COMMAND=(tree --sort=version)
+	disclose_command "${COMMAND[@]}"
+	"${COMMAND[@]}"
+}
+
+check_norminette() {
+	local COMMAND=(norminette -RCheckDefine)
+	disclose_command "${COMMAND[@]}"
+	"${COMMAND[@]}"
+}
+
 uncomment_code() {
 	perl -0777 -pe 's|//\s*(#include\s*<.*?>)|$1|g; s|/\*(\s*(?:(?!\*/).)*?int\s*main.*?)\*/|$1|gs'
 }
 
-compile_review() {
-	cc -Wall -Wextra -Werror -x c - -o "$DIR/a.out" 2>/tmp/compile_err
-}
-
-compile_review_noflag() {
-	cc -x c - -o "$DIR/a.out"
-}
-
-compile_sentinel() {
-	cc -Wall -Wextra -Werror -x c -
-}
-
-disclose_command() {
-	USED_COMMAND=$1
-	echo -e "\033[33mCommand used:\033[0m > $USED_COMMAND\n"
+compile() {
+	local COMMAND=(cc -g -O0 -x c -)	
+	if [ "$1" != "noflags" ]; then
+		COMMAND+=(-Wall -Wextra -Werror) 
+	fi
+	if [ -n "$2" ]; then
+		COMMAND+=(-o "$2")
+	fi
+	disclose_command "${COMMAND[@]}"
+	"${COMMAND[@]}"
 }
 
 check_norm() {
-	norminette -RCheckDefine
+	local COMMAND=(norminette -RCheckDefine)
+	disclose_command "${COMMAND[@]}"
+	"${COMMAND[@]}"
 }
 
 cleanup() {
@@ -81,14 +95,12 @@ review_step_selector() {
 		echo -e "\033[1;34m[Review mode]\033[0m\n"
 
 		if (( $STEP == -2 )); then
-			disclose_command "tree"
-			tree --sort=version
+			show_file_tree
 			show_navigation_prompt
 			if [ "$ARGS" = "" ]; then (( STEP++ )) fi
 
 		elif (( $STEP == -1 )); then
-			disclose_command "norminette"
-			norminette -RCheckDefine
+			check_norminette
 			show_navigation_prompt
 			if [ "$ARGS" = "" ]; then (( STEP++ )) fi
 
@@ -106,8 +118,8 @@ review_step_selector() {
 			disclose_command "bat $FILES"
 			bat "$FILES" --paging=never
 
-			UNCOMMENTED_CODE=$(cat "$FILES" | uncomment_code)
-			echo "$UNCOMMENTED_CODE" | compile_review
+			UNCOMMENTED_CODE=$(cat "${FILES[@]}" | uncomment_code)
+			echo "$UNCOMMENTED_CODE" | compile withflags "$DIR/a.out" 2>/tmp/compile_err
 
 			if [ ! -f "$DIR/a.out" ]; then
 				echo -e "\n\033[1;31m[Compilation Failed]\033[0m"
@@ -122,7 +134,7 @@ review_step_selector() {
 					show_navigation_prompt
 					continue
 				elif [ "$ARGS" = "noflag" ]; then
-					echo "$UNCOMMENTED_CODE" | compile_review_noflag
+					echo "$UNCOMMENTED_CODE" | compile noflag "$DIR/a.out"
 				fi
 			fi
 
@@ -173,60 +185,6 @@ review_step_selector() {
 	done
 }
 
-: << 'COMMENT'
-mode_review_old() {
-	clear
-	find -mindepth 1 -type d -name "ex*" | sort -V | while read -r DIR; do
-		clear
-		FILES=("$DIR"/*.c)
-	    [ -e "${FILES}" ] || { read -e -p "Directory $DIR is empty" </dev/tty; continue; }
-	
-		bat "$DIR/"*.c --paging=never
-
-		cat "$DIR/"*.c | uncomment_code | compile
-
-		if [ ! -f "$DIR/a.out" ]; then
-			echo -e "\n\033[1;31m[Compilation Failed]\033[0m"
-			cat /tmp/compile_err
-			read -e -p "Press Enter to skip to next exercise..." </dev/tty
-			continue
-		fi
-
-		while true; do
-			echo -e "\n\033[1;34m==================== [ $DIR ] ====================\033[0m"
-			# read -raw -editor -prompt
-			read -r -e -p "Enter arguments (or 'n' for next, 'q' to quit): " ARGS </dev/tty
-
-			if [ "$ARGS" = "n" ]; then
-				break
-			elif [ "$ARGS" = "q" ]; then
-				rm -f "$DIR/a.out"
-				[ -d "../review" ] && { cd .. && rm -rf review; }
-				exit 0
-			fi
-
-			clear
-			bat "$DIR"/*.c --paging=never
-			echo -e "\n\033[1;32mRunning with args:\033[0m $ARGS"
-			echo -e "\n\033[1;33m--- Output ---\033[0m"
-	
-			# Run in a subshell so Ctrl+C doesn't kill the parent script
-			(
-				# Reset the Ctrl+C trap inside the subshell so it kills ONLY this binary
-				trap 'exit 130' INT
-				eval "\"$DIR/a.out\" $ARGS" </dev/tty
-			)
-	
-			# Capture if the subshell was interrupted (Exit code 130 means Ctrl+C was pressed)
-			if [ $? -eq 130 ]; then
-				echo -e "\n\033[1;31m[Execution Interrupted by User]\033[0m"
-			fi
-		done
-		rm "$DIR"/a.out 2>/dev/null
-	done
-}
-COMMENT
-
 git_review_wrapper() {
 	local REPO_URL="$1"
 	
@@ -244,7 +202,7 @@ mode_sentinel() {
 	echo -e "\033[1;35m[Dev sentinel launched]\033[0m"
 	inotifywait --include '\.c$' -mre modify . | while read -r DIR EVENT FILE; do
 		clear
-		cat "$DIR"*.c | uncomment_code | compile_sentinel && norminette -RCheckDefine "$DIR/$FILE"
+		cat "$DIR"*.c | uncomment_code | compile noflags && norminette "$DIR/$FILE"
 	done
 }
 

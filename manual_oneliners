@@ -1,3 +1,8 @@
+# Manual oneliners
+Useful to understand and memorize, especially dev sentinel one, useful during exams. Invest 5 minutes writing it at the beginning, so you can compile compulsively in an instant, to test aggressively each line you add, and ensure working code.
+
+---
+
 ## Dev sentinel (Norminette file + uncomment & compile all in triggered directory)
 clear && inotifywait --include '\.c$' -mre modify . | while read -r DIR EVENT FILE; do clear && cat "$DIR"*.c | perl -0777 -pe 's|/\*(\s*(?:(?!\*/).)*?int\smain.*?)\*/|$1|gs' | cc -Wall -Wextra -Werror -x c - && norminette "$DIR/$FILE"; done
 
@@ -7,6 +12,8 @@ clear && tree && read -p "Press Enter to continue..." && clear && norminette && 
 ## Blazing review (Same as above but auto git clone and wipe review directory after)
 clear && read -p "Git repo: " REPO_URL </dev/tty && git clone "$REPO_URL" review && cd review && clear && tree && read -p "Press Enter to continue..." && clear && norminette && read -p "Press Enter to continue..." && clear && find -mindepth 1 -type d -name "ex*" | while read -r DIR; do bat "$DIR/"*.c --paging=never && cat "$DIR/"*.c | perl -0777 -pe 's|/\*(\s*(?:(?!\*/).)*?int\smain.*?)\*/|$1|gs' | cc -Wall -Wextra -Werror -x c - -o "$DIR/a.out" && "$DIR/"a.out </dev/tty && read -p "Press Enter to continue..." </dev/tty && clear; done && rm */a.out && cd .. && rm -rf review
 
+---
+---
 
 # Early scraps (ignore)
 
