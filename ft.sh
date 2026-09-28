@@ -55,7 +55,11 @@ check_norminette() {
 }
 
 uncomment_code() {
-	perl -0777 -pe 's|//\s*(#include\s*<.*?>)|$1|g; s|/\*(\s*(?:(?!\*/).)*?int\s*main.*?)\*/|$1|gs'
+	local FILES=("$@")
+	perl -0777 -pe '
+		print "#line 1 \"$ARGV\"\n";
+		s|//\s*(#include\s*<.*?>)|$1|g; s|/\*(\s*(?:(?!\*/).)*?int\s*main.*?)\*/|$1|gs
+	' "${FILES[@]}"
 }
 
 compile() {
@@ -118,7 +122,7 @@ review_step_selector() {
 			disclose_command "bat $FILES"
 			bat "$FILES" --paging=never
 
-			UNCOMMENTED_CODE=$(cat "${FILES[@]}" | uncomment_code)
+			UNCOMMENTED_CODE=$(uncomment_code "${FILES[@]}")
 			echo "$UNCOMMENTED_CODE" | compile withflags "$DIR/a.out" 2>/tmp/compile_err
 
 			if [ ! -f "$DIR/a.out" ]; then
@@ -202,7 +206,7 @@ mode_sentinel() {
 	echo -e "\033[1;35m[Dev sentinel launched]\033[0m"
 	inotifywait --include '\.c$' -mre modify . | while read -r DIR EVENT FILE; do
 		clear
-		cat "$DIR"*.c | uncomment_code | compile noflags && norminette "$DIR/$FILE"
+		uncomment_code "$DIR"*.c | compile && norminette "$DIR/$FILE"
 	done
 }
 
