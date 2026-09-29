@@ -10,12 +10,14 @@ Usage:
     ft [r|review|clone] [<url>]    - Quickly review other students' projects"
     ft [s|sentinel]                - Automatic compile & norminette on code change"
 
-Review mode keywords :
+Review mode keywords:
     n              - Next review step / next exercise
     p              - previous review step / previous exercise
     q              - Quit review cleanly and run program cleanup code
     noflag         - Try compiling without flags
     debug perl     - Print the perl regex output for debug purposes
+
+Author: abalea, aka. Olkris
 EOF
 }
 
@@ -119,8 +121,8 @@ review_step_selector() {
 				continue
 			fi
 
-			disclose_command "bat $FILES"
-			bat "$FILES" --paging=never
+			disclose_command "bat ${FILES[@]}"
+			bat "${FILES[@]}" --paging=never
 
 			UNCOMMENTED_CODE=$(uncomment_code "${FILES[@]}")
 			echo "$UNCOMMENTED_CODE" | compile withflags "$DIR/a.out" 2>/tmp/compile_err
