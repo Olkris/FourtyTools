@@ -158,8 +158,8 @@ review_step_selector() {
 					# Mini repeat of the print that occurred before this while loop, probably not the best solution
 					clear
 					echo -e "\033[1;34m[Review mode]\033[0m\n"
-					disclose_command "bat $FILES"
-					bat "$FILES" --paging=never
+					disclose_command "bat ${FILES[@]}"
+					bat "${FILES[@]}" --paging=never
 					echo -e "\n\033[1;32mRunning with args:\033[0m $ARGS"
 					echo -e "\n\033[1;33m--- Output ---\033[0m"
 	
