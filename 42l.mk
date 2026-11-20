@@ -29,4 +29,15 @@ sentinel:
 review:
 	@echo "Not implemented yet"
 
-.PHONY: default compile norminette sentinel review
+
+
+REPO_URL := https://raw.githubusercontent.com/Olkris/FourtyTools/main
+
+update:
+	@printf "\033[1;34mUpdating 42l...\033[0m\n"
+	@curl -fsSL "$(REPO_URL)/42l.mk" -o "$(HOME)/.local/share/42l/42l.mk"
+	@curl -fsSL "$(REPO_URL)/42l.sh" -o "$(HOME)/.local/bin/42l"
+	@chmod +x "$(HOME)/.local/bin/42l"
+	@printf "\033[1;32m42l is up to date!\033[0m\n"
+
+.PHONY: default compile norminette sentinel review update
