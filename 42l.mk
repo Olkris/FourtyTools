@@ -13,13 +13,18 @@ default: sentinel
 compile:
 	@$(if $(wildcard $(DIR)/Makefile), \
 		printf "\033[1;92mUsing project's own Makefile:\033[0m\n" && \
-		$(MAKE) --no-print-directory -C $(DIR), \
+		$(MAKE) --print-directory -C $(DIR), \
 		printf "\033[1;33mNo Makefile found, dry compiling single file:\033[0m\n" && \
 		$(CC) $(CFLAGS) $(if $(filter fast,$(MODE)),$(NO_COMP),$(NULL_COMP)) $(FILE) \
 		)
 
 norminette:
-	@norminette $(FILE)
+	@-clear && norminette $(FILE)
+	@if ! norminette $(DIR) >/dev/null 2>&1; then \
+		printf "\033[1;33mWarning: Other files still aren't respecting the norm:\033[0m\n"; \
+		norminette $(DIR) | grep -v ": OK!"; \
+	fi
+	
 
 sentinel:
 	@inotifywait . -mr -e close_write -e moved_to --include '\.(c|h)$$' | while read -r DIR EVENT FILE; do \
