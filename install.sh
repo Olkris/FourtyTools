@@ -1,6 +1,6 @@
-INSTALLER_DIR=	"$(cd "$(dirname "$0")" && pwd)"
-SHARE_DIR=		"$HOME/.local/share/42l"
-BIN_DIR=		"$HOME/.local/bin"
+INSTALLER_DIR="$(cd "$(dirname "$0")" && pwd)"
+SHARE_DIR="$HOME/.local/share/42l"
+BIN_DIR="$HOME/.local/bin"
 
 mkdir -p "$BIN_DIR" "$SHARE_DIR"
 cp "$INSTALLER_DIR/42l.mk" "$SHARE_DIR/42l.mk"
